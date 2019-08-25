@@ -69,7 +69,6 @@ function Game(gameWidth, gameHeight) {
     shipSpeed: Math.floor(0.3 * gameWidth),
     levelDifficultyMultiplier: 0.4,
     pointsPerInvader: 5,
-    limitLevelIncrease: 25,
     imageSampleFrameRate: 200,
     detectionScoreLimit: 15,
     noDetectionTimeLimit: 3,
@@ -1202,7 +1201,6 @@ PlayState.prototype.enter = function(game) {
   
   //  Set the ship speed for this level, as well as invader params.
   const levelMultiplier = (this.level - 1) * this.config.levelDifficultyMultiplier;
-  const limitLevel = (this.level < this.config.limitLevelIncrease ? this.level : this.config.limitLevelIncrease);
   this.shipSpeed = this.config.shipSpeed;
   this.invaderInitialVelocity = this.config.invaderInitialVelocity * (1 + 1.5 * levelMultiplier);
   this.bombRate = this.config.bombRate * (1 + levelMultiplier * 2);
