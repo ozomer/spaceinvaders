@@ -24,7 +24,7 @@
 //  Constants for the keyboard.
 // const KEY_SPACE = 32;
 
-const skipGame = /skip-game/.test(window.location.href); // fo testing
+const skipGame = /skip-game/.test(window.location.hash); // fo testing
 
 const initialLives = skipGame ? 0 : 5; // for testing
 
@@ -491,7 +491,7 @@ Game.prototype.start = function() {
   //  Set the game variables.
   this.lives = initialLives;
   this.lastHit = 0;
-  this.config.debugMode = /debug=true/.test(window.location.href);
+  this.config.debugMode = /debug=true/.test(window.location.hash);
   
   //  Start the game loop.
   const self = this;
