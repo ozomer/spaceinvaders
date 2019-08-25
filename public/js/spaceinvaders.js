@@ -1211,8 +1211,8 @@ PlayState.prototype.enter = function(game) {
   this.rocketMaxFireRate = this.config.rocketMaxFireRate; // + 0.4 * limitLevel;
   
   //  Create the invaders.
-  const ranks = this.config.invaderRanks + 0.1 * limitLevel;
-  const files = this.config.invaderFiles + 0.2 * limitLevel;
+  const ranks = this.config.invaderRanks + this.level;
+  const files = this.config.invaderFiles;
   const invaders = [];
   for (let rank = 0; rank < ranks; rank++) {
     for (let file = 0; file < files; file++) {
