@@ -96,7 +96,7 @@ function Game(gameWidth, gameHeight) {
   this.images = null;
 
   // this.webcamInitialized = false;
-  this.imageSamples = [];
+  this.imageSamples = null; // will be an array if needs to be filled
   this.angles = [0].map(angle => angle * Math.PI / 180);
   this.pose = CENTER_POSE;
   this.highVolume = false;
@@ -239,13 +239,17 @@ Game.prototype.initCamvas = function() {
   */
   try {
     // runs async process
-    this.mycamvas = new camvas({
+    this.mainCamvas = new camvas({
       callback: this.processVideo.bind(this),
       errorHandler: this.handleCamvasFailure.bind(this),
       mimeType: 'video/webm',
     });
-    this.mediaRecorderOutputType = 'video/webm';
-    this.mediaRecorderFilenameExtension = 'webm';
+    if (this.mainCamvas.mediaRecorder) {
+      this.mediaRecorderOutputType = 'video/webm';
+      this.mediaRecorderFilenameExtension = 'webm';  
+    } else {
+      this.imageSamples = [];
+    }
   } catch (err) {
     this.handleCamvasFailure(err);
     return;
@@ -279,7 +283,7 @@ Game.prototype.processVideo = function(video, dt, analyser, byteTimeDomainData) 
       }
     } else if (self.lastDiverseVoiceSample && ((now - self.lastDiverseVoiceSample > 4e3))) {
       self.lastDiverseVoiceSample = null;
-      self.mycamvas.markShouldResetStream();
+      self.mainCamvas.markShouldResetStream();
     }
     const absVolumes = byteTimeDomainData.map(sample => Math.abs(sample - 128));
     // self.medianVolumeCollector.push(absVolumes.sort((a, b) => a - b)[Math.floor(absVolumes.length / 2)]);
@@ -330,7 +334,7 @@ Game.prototype.processVideo = function(video, dt, analyser, byteTimeDomainData) 
     canvas.context.globalAlpha = 1;
     canvas.context.drawImage(video, 0, 0, canvas.element.width, canvas.element.height);
     const imageData = canvas.context.getImageData(0, 0, canvas.element.width, canvas.element.height);
-    if ((canvas === self.mainRecordingCanvas) && (now - self.lastImageSample > self.config.imageSampleFrameRate)) {
+    if (self.imageSamples && (canvas === self.mainRecordingCanvas) && (now - self.lastImageSample > self.config.imageSampleFrameRate)) {
       self.lastImageSample = now;
       self.imageSamples.push(imageData);
       if (self.imageSamples.length > 1200) {
@@ -975,26 +979,26 @@ GameOverState.prototype.enter = function(game) {
     clearInterval(game.medianVoiceInterval);
     game.medianVoiceInterval = null;
   }
-  const mediaRecorder = game.mycamvas.mediaRecorder;
-  if (game.mycamvas.stream) {
-    game.mycamvas.stream.getTracks().forEach(track => track.stop());
+  const mediaRecorder = game.mainCamvas.mediaRecorder;
+  if (game.mainCamvas.stream) {
+    game.mainCamvas.stream.getTracks().forEach(track => track.stop());
   }
-  if (game.mycamvas.mediaRecorderStream) {
-    game.mycamvas.mediaRecorderStream.getTracks().forEach(track => track.stop());
+  if (game.mainCamvas.mediaRecorderStream) {
+    game.mainCamvas.mediaRecorderStream.getTracks().forEach(track => track.stop());
   }
   if (mediaRecorder) {
-    game.mycamvas.allowStreamReset = false;
+    game.mainCamvas.allowStreamReset = false;
     mediaRecorder.onstop = () => {
       mediaRecorder.onstop = undefined;
       // safety - wait for last media-chunk
       setTimeout(() => {
-        game.mycamvas.video.srcObject = null;
-        if (game.mycamvas.video.parentElement) { // safety
-          game.mycamvas.video.parentElement.removeChild(game.mycamvas.video);
+        game.mainCamvas.video.srcObject = null;
+        if (game.mainCamvas.video.parentElement) { // safety
+          game.mainCamvas.video.parentElement.removeChild(game.mainCamvas.video);
         }
         const newVideo = document.createElement('video');
         console.log('creating blob with type: ' + game.mediaRecorderOutputType);
-        self.videoUrl = URL.createObjectURL(new Blob(game.mycamvas.mediaChunks, { type: game.mediaRecorderOutputType }));
+        self.videoUrl = URL.createObjectURL(new Blob(game.mainCamvas.mediaChunks, { type: game.mediaRecorderOutputType }));
         newVideo.src = self.videoUrl;
 
         const maxWidth = game.width;
@@ -1031,7 +1035,7 @@ GameOverState.prototype.enter = function(game) {
     mediaRecorder.stop();
   } else if (game.imageSamples.length > 0) {
     // cannot play video
-    game.mycamvas.shouldStopLoop = true; // stops the loop so the canvas can be used
+    game.mainCamvas.shouldStopLoop = true; // stops the loop so the canvas can be used
     this.imageSamples = game.imageSamples;
     this.zoomCanvas = document.createElement('canvas');
     this.zoomCanvas.width = 1;
