@@ -327,6 +327,7 @@ Game.prototype.processVideo = function(video, dt, analyser, byteTimeDomainData) 
       // canvasDimensionsElement.innerText = '' + canvas.element.width + 'x' + canvas.element.height;
     }
     // render the video frame to the canvas element and extract RGBA pixel data
+    canvas.context.globalAlpha = 1;
     canvas.context.drawImage(video, 0, 0, canvas.element.width, canvas.element.height);
     const imageData = canvas.context.getImageData(0, 0, canvas.element.width, canvas.element.height);
     if ((canvas === self.mainRecordingCanvas) && (now - self.lastImageSample > self.config.imageSampleFrameRate)) {
@@ -893,6 +894,7 @@ TutorialState.prototype.draw = function(ctx, game, now, dt) {
   ctx.translate(game.width / 2, imageY);
   ctx.rotate(headAngle);
   ctx.translate(-game.width / 2, -imageY);
+  ctx.globalAlpha = 1;
   ctx.drawImage(game.images.alienFace, game.width / 2 - imageSide / 2, imageY - imageSide, imageSide, imageSide);
   ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transformation
 
@@ -904,6 +906,7 @@ TutorialState.prototype.draw = function(ctx, game, now, dt) {
   if (this.invaders.length > 0) {
     this.invaders.forEach((wrapper) => {
       // Draw invader
+      ctx.globalAlpha = 1;
       ctx.drawImage(game.images.alien1, wrapper.invader.x - wrapper.invader.width/2, wrapper.invader.y - wrapper.invader.height/2, wrapper.invader.width, wrapper.invader.height);
     });
     // Draw rockets.
@@ -1069,6 +1072,7 @@ GameOverState.prototype.draw = function(ctx, game, now, dt) {
     
     const scale = (tooWide ? (maxWidth / imageSample.width) : (maxHeight / imageSample.height));
     ctx.scale(scale, scale);
+    ctx.globalAlpha = 1;
     ctx.drawImage(this.zoomCanvas, tooWide ? 0 : Math.floor(((game.width / scale) - imageSample.width) / 2), Math.floor(this.videoTop / scale));
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   }
@@ -1436,6 +1440,7 @@ PlayState.prototype.draw = function(ctx, game, now, dt) {
   // ctx.fillStyle = '#006600';
   for(var i=0; i<this.invaders.length; i++) {
     var invader = this.invaders[i];
+    ctx.globalAlpha = 1;
     ctx.drawImage([game.images.alien1, game.images.alien2, game.images.alien3, game.images.alien4][invader.rank % 4], invader.x - invader.width/2, invader.y - invader.height/2, invader.width, invader.height);
   }
   
