@@ -9,9 +9,9 @@ function Starfield() {
 	this.canvas = null;
 	this.width = 0;
 	this.width = 0;
-	this.minVelocity = 15;
-	this.maxVelocity = 30;
-	this.stars = 100;
+	this.minVelocity = 30;
+	this.maxVelocity = 60;
+	this.stars = 50;
 	this.intervalId = 0;
 }
 
@@ -21,8 +21,10 @@ Starfield.prototype.initialise = function(div) {
 
 	//	Store the div.
 	this.containerDiv = div;
-	self.width = window.innerWidth;
-	self.height = window.innerHeight;
+  self.width = window.innerWidth;
+
+  self.height = Math.max( document.body.scrollHeight, document.body.offsetHeight, 
+                          document.documentElement.clientHeight, document.documentElement.scrollHeight, document.documentElement.offsetHeight );
 
 	window.onresize = function(event) {
 		self.width = window.innerWidth;

@@ -1,0 +1,6 @@
+User-agent: *
+Host: spaceinvadersai.com
+Disallow: /bin/
+Disallow: /css/
+Disallow: /images/
+Disallow: /js/
