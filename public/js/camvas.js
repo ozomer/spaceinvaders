@@ -17,6 +17,7 @@ function camvas(options) {
   var self = this
   this.callback = options.callback
   this.errorHandler = options.errorHandler || (err => console.error('camvas error: ' + err));
+  this.loopRate = options.loopRate || 20;
 
   // We can't `new Video()` yet, so we'll resort to the vintage
   // "hidden div" hack for dynamic loading.
@@ -107,31 +108,25 @@ function camvas(options) {
   // As soon as we can draw a new frame on the canvas, we call the `draw` function 
   // we passed as a parameter.
   this.update = function() {
-    let last = Date.now()
     const loop = async function() {
       if (self.shouldStopLoop) {
         self.shouldStopLoop = false;
         return;
       }
       try {
-        // For some effects, you might want to know how much time is passed
-        // since the last frame; that's why we pass along a Delta time `dt`
-        // variable (expressed in milliseconds)
-        var dt = Date.now() - last
-        self.callback(self.video, dt, self.analyser, self.byteTimeDomainData)
+        self.callback(self.video, self.analyser, self.byteTimeDomainData)
         if (self.shouldResetStream) {
           console.info('resetting stream')
           self.shouldResetStream = false
           self.setStream(await navigator.mediaDevices.getUserMedia(mediaOptions))
         }
-        last = Date.now()
-        requestAnimationFrame(loopTimeout) 
+        requestAnimationFrame(loopTimeout);
       } catch (err) {
         self.errorHandler(err)
       }
     }
     const loopTimeout = function() {
-      setTimeout(loop, 5);
+      setTimeout(loop, self.loopRate);
     }
     requestAnimationFrame(loopTimeout)
   }

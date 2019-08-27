@@ -70,7 +70,8 @@ function Game(gameWidth, gameHeight) {
     levelDifficultyMultiplier: 0.4,
     pointsPerInvader: 5,
     imageSampleFrameRate: 200,
-    detectionScoreLimit: 15,
+    angleSampleFrameRate: 100,
+    detectionScoreLimit: 6,
     noDetectionTimeLimit: 3,
   };
 
@@ -261,7 +262,11 @@ Game.prototype.initCamvas = function() {
   }, 8e3);
 };
 
-Game.prototype.processVideo = function(video, dt, analyser, byteTimeDomainData) {
+function higherScore(a, b) {
+  return ((a.score < b.score) ? b : a);
+}
+
+Game.prototype.processVideo = function(video, analyser, byteTimeDomainData) {
   const now = Date.now();
   const self = this;
   if (analyser && (now - this.lastVoiceSample > 50)) {
@@ -300,6 +305,11 @@ Game.prototype.processVideo = function(video, dt, analyser, byteTimeDomainData) 
       self.highVolume = false;
     }
   }
+  const shouldSampleImage = self.imageSamples && (now - self.lastImageSample > self.config.imageSampleFrameRate);
+  const shouldSampleAngle = (now - this.lastAngleSample > self.config.angleSampleFrameRate);
+  if (!shouldSampleImage && !shouldSampleAngle) {
+    return;
+  }
 
   if (video.videoWidth && (video.videoWidth !== this.videoWidth)) {
     console.info('setting game width from ' + this.videoWidth + ' to ' + video.videoWidth);
@@ -310,7 +320,7 @@ Game.prototype.processVideo = function(video, dt, analyser, byteTimeDomainData) 
     this.videoHeight = video.videoHeight;
   }
   
-  const results = this.canvases.map((canvas) => {
+  const results = this.canvases.map((canvas) => { // in theory we could work with mutiple canvases in mutiple angles
     let canvasChanged = false;
     if (video.videoWidth && (video.videoWidth !== canvas.element.width)) {
       console.info('setting video canvas ' + canvas.index + ' width from ' + canvas.element.width + ' to ' + video.videoWidth);
@@ -333,13 +343,16 @@ Game.prototype.processVideo = function(video, dt, analyser, byteTimeDomainData) 
     canvas.context.globalAlpha = 1;
     canvas.context.drawImage(video, 0, 0, canvas.element.width, canvas.element.height);
     const imageData = canvas.context.getImageData(0, 0, canvas.element.width, canvas.element.height);
-    if (self.imageSamples && (canvas === self.mainRecordingCanvas) && (now - self.lastImageSample > self.config.imageSampleFrameRate)) {
+    if (shouldSampleImage && (canvas === self.mainRecordingCanvas)) {
       self.lastImageSample = now;
       self.imageSamples.push(imageData);
       if (self.imageSamples.length > 1200) {
         // keep only last 2 minutes (for frame rate 200)
         self.imageSamples.splice(0, self.imageSamples.length - 600);
       }
+    }
+    if (!shouldSampleAngle) {
+      return { score: -Infinity };
     }
     // prepare input to `runCascade`
     const image = {
@@ -363,9 +376,7 @@ Game.prototype.processVideo = function(video, dt, analyser, byteTimeDomainData) 
     );
 
     if (dets.length === 0) {
-      return {
-        score: -Infinity
-      };
+      return { score: -Infinity };
     }
 
     const bestScoreDet = dets
@@ -373,7 +384,7 @@ Game.prototype.processVideo = function(video, dt, analyser, byteTimeDomainData) 
       det: det,
       score: det[3],
     }))
-    .reduce((soFar, newValue) => ((soFar.score < newValue.score) ? newValue : soFar));
+    .reduce(higherScore);
     return {
       det: bestScoreDet.det,
       score: bestScoreDet.score,
@@ -382,87 +393,76 @@ Game.prototype.processVideo = function(video, dt, analyser, byteTimeDomainData) 
     };
   }); // some results may be have score -Infinity
 
-  /*
-  const bestResult = results.reduce((soFar, newValue) => {
-    if (!soFar) {
-      return newValue;
-    }
-    if (!newValue) {
-      return soFar;
-    }
-    return (soFar.score < newValue.score) ? newValue : soFar;
-  });
-  */
-
-  if (results.some(result => result.det)) {
-    const bestResults = results.filter(result => result && (result.score > self.config.detectionScoreLimit));
-    if (bestResults.length > 0) {
-      // const scoreText = (bestResults.map(result => result.score).reduce(sum) / bestResults.length).toFixed(0).padStart(3, '0');
-      // scoreElement.value = scoreText + ' / ' + scoreText;
-      // scoreElement.setAttribute('data-lastGoodScore', scoreText);
-      if (now - this.lastAngleSample > 100) {
-        // const bestScore = Math.max(...bestResults.map(result => result.score));
-        const angleScores = results
-        .map((result) => {
-          if (!result.det) {
-            return {
-              score: result.score,
-              angle: NaN,
-            };
-          }
-          let firstX, firstY, secondX, secondY;
-          //
-          // find the eye pupils for each detected face
-          // starting regions for localization are initialized based on the face bounding box
-          // (parameters are set empirically)
-          // first eye
-          const r = result.det[0] - 0.075*result.det[2];
-          const s = 0.35*result.det[2];
-          const c1 = result.det[1] - 0.175*result.det[2];
-          [firstY, firstX] = self.doPuploc(r, c1, s, 63, result.image)
-          // second eye
-          // r = result.det[0] - 0.075*result.det[2];
-          const c2 = result.det[1] + 0.175*result.det[2];
-          // s = 0.35*result.det[2];
-          [secondY, secondX] = self.doPuploc(r, c2, s, 63, result.image)
-          /*
-          if(secondY>=0 && secondX>=0)
-          {
-            ctx.beginPath();
-            ctx.arc(secondX, secondY, 1, 0, 2*Math.PI, false);
-            ctx.lineWidth = 3;
-            ctx.strokeStyle = 'blue';
-            ctx.stroke();
-          }
-          */
-          // Remember that Y axis is transposed
-          return {
-            score: result.score,
-            angle: (Math.atan((secondY - firstY) / (secondX - firstX)) - result.canvas.angle) * 180 / Math.PI,
-          };
-        });
-        // const closeToBest = 0.95;
-        // angleElement.value = angleScores.map(angleScore => (angleScore.score > self.config.detectionScoreLimit ? angleScore.angle.toFixed(0) : '_').padStart(3, ' ') + ((angleScore.score >= bestScore * closeToBest) ? '*' : ' ')).join(', ');
-        // const goodAngleScores = angleScores.filter(angleScore => angleScore.score > self.detectionScoreLimit);
-        // const angle = goodAngleScores.map(angleScore => angleScore.angle).reduce(sum) / goodAngleScores.length;
-        const angle = angleScores.reduce((as1, as2) => (as1.score > as2.score ? as1 : as2)).angle;
-        // const goodAngles = goodAngleScores.filter(as => as.score > bestScore * closeToBest).map(as => as.angle).sort((a, b) => a - b);
-        // const angle = (goodAngles[Math.floor((goodAngles.length - 1) / 2)] + goodAngles[Math.ceil((goodAngles.length - 1) / 2)]) / 2;
-        // poseElement.value = angle.toFixed(0).padEnd(4, ' ') + ['left', 'center', 'right'][(angle < 12) + (angle < -12)];
-        // canvasIndexElement.value = bestResults.map(result => result.canvas.index).join(', ');
-        this.pose = [LEFT_POSE, CENTER_POSE, RIGHT_POSE][(angle < 12) + (angle < -12)];
-        this.lastAngleSample = now;
-      }
-    }
-    // else {
-      // const score = Math.max(...results.map(result => result.score));
-      // check the detection score
-      // if it's above the threshold, draw it
-      // (the constant 50.0 is empirical: other cascades might require a different one)
-      // const scoreText = score.toFixed(0).padStart(3, '0');
-      // scoreElement.value = scoreText + ' / ' + (scoreElement.getAttribute('data-lastGoodScore') || '');
-    // }
+  if (!shouldSampleAngle) {
+    return;
   }
+
+  const sufficientResults = results.filter(result => (result.score > self.config.detectionScoreLimit));
+  if (sufficientResults.length === 0) {
+    return;
+  }
+  // const bestScore = Math.max(...sufficientResults.map(result => result.score));
+  const angleScores = sufficientResults
+  .map((result) => {
+    /*
+    if (!result.det) {
+      return {
+        score: result.score,
+        angle: NaN,
+      };
+    }
+    */
+    let firstX, firstY, secondX, secondY;
+    //
+    // find the eye pupils for each detected face
+    // starting regions for localization are initialized based on the face bounding box
+    // (parameters are set empirically)
+    // first eye
+    const r = result.det[0] - 0.075*result.det[2];
+    const s = 0.35*result.det[2];
+    const c1 = result.det[1] - 0.175*result.det[2];
+    [firstY, firstX] = self.doPuploc(r, c1, s, 63, result.image);
+    if ((firstY < 0) || (firstX < 0)) {
+      return null;
+    }
+    // second eye
+    // r = result.det[0] - 0.075*result.det[2];
+    const c2 = result.det[1] + 0.175*result.det[2];
+    // s = 0.35*result.det[2];
+    [secondY, secondX] = self.doPuploc(r, c2, s, 63, result.image);
+    if ((secondY < 0) || (secondX < 0)) {
+      return null;
+    }
+    /*
+    if(secondY>=0 && secondX>=0)
+    {
+      ctx.beginPath();
+      ctx.arc(secondX, secondY, 1, 0, 2*Math.PI, false);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'blue';
+      ctx.stroke();
+    }
+    */
+    // Remember that Y axis is transposed
+    return {
+      score: result.score,
+      angle: (Math.atan((secondY - firstY) / (secondX - firstX)) - result.canvas.angle) * 180 / Math.PI,
+    };
+  }).filter(Boolean);
+  if (angleScores.length === 0) {
+    return;
+  }
+  // const closeToBest = 0.95;
+  // angleElement.value = angleScores.map(angleScore => (angleScore.score > self.config.detectionScoreLimit ? angleScore.angle.toFixed(0) : '_').padStart(3, ' ') + ((angleScore.score >= bestScore * closeToBest) ? '*' : ' ')).join(', ');
+  // const goodAngleScores = angleScores.filter(angleScore => angleScore.score > self.detectionScoreLimit);
+  // const angle = goodAngleScores.map(angleScore => angleScore.angle).reduce(sum) / goodAngleScores.length;
+  const angle = angleScores.reduce(higherScore).angle;
+  // const goodAngles = goodAngleScores.filter(as => as.score > bestScore * closeToBest).map(as => as.angle).sort((a, b) => a - b);
+  // const angle = (goodAngles[Math.floor((goodAngles.length - 1) / 2)] + goodAngles[Math.ceil((goodAngles.length - 1) / 2)]) / 2;
+  // poseElement.value = angle.toFixed(0).padEnd(4, ' ') + ['left', 'center', 'right'][(angle < 12) + (angle < -12)];
+  // canvasIndexElement.value = sufficientResults.map(result => result.canvas.index).join(', ');
+  this.pose = [LEFT_POSE, CENTER_POSE, RIGHT_POSE][(angle < 12) + (angle < -12)];
+  this.lastAngleSample = now;
 }
 
 Game.prototype.moveToState = function(state) {
