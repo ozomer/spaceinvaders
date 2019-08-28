@@ -549,7 +549,7 @@ function GameLoop(game, now, dt) {
 function reportEntering(state) {
   safeGa('send', 'event', {
     eventCategory: 'Gameplay',
-    eventAction: 'Enter State',
+    eventAction: 'enter_state',
     eventLabel: 'Enter ' + (state.constructor || {}).name,
   });
 }
@@ -1149,7 +1149,7 @@ GameOverState.prototype.click = function(game, x, y) {
       if (x < game.width * 0.5) {
         safeGa('send', 'event', {
           eventCategory: 'GameOverAction',
-          eventAction: 'Credits',
+          eventAction: 'credits',
         });
         setTimeout(() => {
           window.location.href = 'credits.html';
@@ -1158,7 +1158,7 @@ GameOverState.prototype.click = function(game, x, y) {
         console.log('play again');
         safeGa('send', 'event', {
           eventCategory: 'GameOverAction',
-          eventAction: 'Play Again',
+          eventAction: 'play_again',
         });
         setTimeout(() => window.location.reload(), 100);
       }
@@ -1166,7 +1166,7 @@ GameOverState.prototype.click = function(game, x, y) {
       if (x < game.width * 0.5) {
         safeGa('send', 'event', {
           eventCategory: 'GameOverAction',
-          eventAction: 'Open Share Buttons',
+          eventAction: 'open_share_buttons',
         });
         this.shareVisible = true;
         document.getElementById('sharebuttons').style.visibility = 'visible';
@@ -1174,7 +1174,7 @@ GameOverState.prototype.click = function(game, x, y) {
         if (this.videoUrl) {
           safeGa('send', 'event', {
             eventCategory: 'GameOverAction',
-            eventAction: 'Save Video',
+            eventAction: 'save_video',
           });
           console.log('save video');
           const a = document.createElement('a');
