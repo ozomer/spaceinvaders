@@ -548,8 +548,8 @@ function GameLoop(game, now, dt) {
 
 function reportEntering(state) {
   safeGa('send', 'event', {
-    eventCategory: 'Enter State',
-    eventAction: 'enter',
+    eventCategory: 'Gameplay',
+    eventAction: 'Enter State',
     eventLabel: 'Enter ' + (state.constructor || {}).name,
   });
 }
