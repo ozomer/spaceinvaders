@@ -48,6 +48,14 @@ function diversityChecker() {
   };
 }
 
+function reportEntering(state) {
+  safeGa('send', 'event', {
+    eventCategory: 'Gameplay',
+    eventAction: 'enter_state',
+    eventLabel: 'Enter ' + (state.constructor || {}).name,
+  });
+}
+
 //  Creates an instance of the Game class.
 function Game(gameWidth, gameHeight) {
   //  Set the initial config.
@@ -544,14 +552,6 @@ function GameLoop(game, now, dt) {
       currentState.draw(ctx, game, now, dt);
     }
   }
-}
-
-function reportEntering(state) {
-  safeGa('send', 'event', {
-    eventCategory: 'Gameplay',
-    eventAction: 'enter_state',
-    eventLabel: 'Enter ' + (state.constructor || {}).name,
-  });
 }
 
 Game.prototype.pushState = function(state) {
