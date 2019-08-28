@@ -17,7 +17,7 @@ function camvas(options) {
   var self = this
   this.callback = options.callback
   this.errorHandler = options.errorHandler || (err => console.error('camvas error: ' + err));
-  this.loopRate = options.loopRate || 20;
+  this.loopRate = options.loopRate || 10;
 
   // We can't `new Video()` yet, so we'll resort to the vintage
   // "hidden div" hack for dynamic loading.

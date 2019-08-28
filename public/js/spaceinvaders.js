@@ -1147,17 +1147,35 @@ GameOverState.prototype.click = function(game, x, y) {
   } else {
     if ((game.width * 1.25 < y) && (y < game.width * 1.33)) {
       if (x < game.width * 0.5) {
-        window.location.href = 'credits.html';
+        safeGa('send', 'event', {
+          eventCategory: 'GameOverAction',
+          eventAction: 'Credits',
+        });
+        setTimeout(() => {
+          window.location.href = 'credits.html';
+        }, 100);
       } else {
         console.log('play again');
-        window.location.reload();
+        safeGa('send', 'event', {
+          eventCategory: 'GameOverAction',
+          eventAction: 'Play Again',
+        });
+        setTimeout(() => window.location.reload(), 100);
       }
     } else if ((game.width * 1.33 < y) && (y < game.width * 1.41)) {
       if (x < game.width * 0.5) {
+        safeGa('send', 'event', {
+          eventCategory: 'GameOverAction',
+          eventAction: 'Open Share Buttons',
+        });
         this.shareVisible = true;
         document.getElementById('sharebuttons').style.visibility = 'visible';
       } else {
         if (this.videoUrl) {
+          safeGa('send', 'event', {
+            eventCategory: 'GameOverAction',
+            eventAction: 'Save Video',
+          });
           console.log('save video');
           const a = document.createElement('a');
           a.style.display = 'none';
