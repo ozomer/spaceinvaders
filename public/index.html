@@ -10,6 +10,16 @@
     gtag('js', new Date());
 
     gtag('config', 'G-2QJYH6W7NE');
+
+    function safeGa(...args) {
+      if (window.ga) {
+        try {
+          return window.ga(...args);
+        } catch (err) {
+          console.error('Google-Analytics Error: ' + err);
+        }
+      }
+    }
   </script>
   <meta name="description" content="Space Invaders with Artificial Intelligence" />
   <meta name="keywords" content="Space,Invaders,Space Invaders,Game,Artificial Intelligence" />

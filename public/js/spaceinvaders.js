@@ -466,13 +466,14 @@ Game.prototype.processVideo = function(video, analyser, byteTimeDomainData) {
 }
 
 Game.prototype.moveToState = function(state) {
-   //  If we are in a state, leave it.
+   // If we are in a state, leave it.
    if(this.currentState() && this.currentState().leave) {
      this.currentState().leave(game);
      this.stateStack.pop();
    }
    
-   //  If there's an enter function for the new state, call it.
+   // If there's an enter function for the new state, call it.
+   reportEntering(state);
    if(state.enter) {
      state.enter(game);
    }
@@ -545,14 +546,23 @@ function GameLoop(game, now, dt) {
   }
 }
 
+function reportEntering(state) {
+  safeGa('send', 'event', {
+    eventCategory: 'Enter State',
+    eventAction: 'enter',
+    eventLabel: 'Enter ' + (state.constructor || {}).name,
+  });
+}
+
 Game.prototype.pushState = function(state) {
 
-    //  If there's an enter function for the new state, call it.
-    if(state.enter) {
-        state.enter(game);
-    }
-    //  Set the current state.
-    this.stateStack.push(state);
+  //  If there's an enter function for the new state, call it.
+  reportEntering(state);
+  if(state.enter) {
+    state.enter(game);
+  }
+  //  Set the current state.
+  this.stateStack.push(state);
 };
 
 Game.prototype.popState = function() {
@@ -705,6 +715,10 @@ function FailState(err) {
 }
 
 FailState.prototype.enter = function(game) {
+  safeGa('send', 'exception', {
+    exDescription: '' + (this.err.message || this.err) + ' ' + ((this.err.stack ? ' ' + this.err.stack : '')),
+    exFatal: true,
+  });
 };
 
 FailState.prototype.click = function(x, y) {
